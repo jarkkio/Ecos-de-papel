@@ -1,72 +1,54 @@
 # Ecos de Papel 🦉
-Aplicación web del club de escritura Ecos de Papel.
 
-**Sitio web:** https://jarkkio.github.io/Ecos-de-papel/
+**Sitio:** https://jarkkio.github.io/Ecos-de-papel/
 
-**Backend:** Supabase `Ecos de Papel` (`bioaztyrkmingcziolot`). Es totalmente independiente de UMBRA Reader.
+**Código:** https://github.com/jarkkio/Ecos-de-papel
 
-## Estado actual (13 de octubre de 2026)
+**Backend:** proyecto Supabase Ecos de Papel `bioaztyrkmingcziolot`, independiente de UMBRA Reader.
 
-**El backend está creado y conectado a la web:** `config.js` contiene únicamente la URL y publishable key públicas de Supabase, con Row Level Security (RLS).
+## Acceso sencillo
 
-Las tablas creadas son `profiles`, `lectodinamicas`, `lectodinamica_images`, `fragments`, `votes`, `works`, `readings` y `role_assignments`. El bucket Storage `lectodinamicas` permite administrar tres imágenes por reto.
+La aplicación **solo pide nombre de usuario y contraseña**, no solicita dirección de correo ni confirmación. Los nombres de usuario admiten de 3 a 24 caracteres (letras a-z, números, guion bajo); contraseñas de 8 a 72 caracteres. Cada cuenta se crea con rol **Miembro**.
 
-Los formularios, las operaciones sobre lecturas, los fragmentos, la votación y la gestión de roles ya están conectados al backend. En esta instalación no se importaron usuarios ficticios: las tablas comienzan vacías.
+Supabase Auth funciona en el servidor con un identificador técnico interno, que no se muestra al usuario. La creación se realiza mediante la Edge Function `username-register` (ya desplegada), con validación de campos, limitación básica de registros y claves secretas confinadas en el servidor. El frontend utiliza exclusivamente la *publishable key*.
 
-**Pendiente antes de admitir miembros reales:** configurar el correo SMTP del proyecto Supabase, crear/verificar la primera cuenta y otorgarle el rol de administrador. Hasta completar esto, no presentar el sistema como un servicio con registro público listo.
+**La cuenta administradora inicial todavía no está creada**: se debe registrar desde la interfaz y después promover en Supabase. No habilitar el club para miembros externos hasta realizarlo.
 
-## Habilitar registro real de los miembros
+## Iniciar como administrador del club
 
-**1. Configurar la entrega de correos.** En [Supabase Auth SMTP](https://supabase.com/dashboard/project/bioaztyrkmingcziolot/auth/smtp) agrega un proveedor SMTP autorizado (por ejemplo, Resend, Brevo, Amazon SES o el servicio que prefiera la administración). Sin SMTP propio, el servicio predeterminado de Supabase solo admite correos autorizados del equipo del proyecto. [Documentación oficial SMTP](https://supabase.com/docs/guides/auth/auth-smtp).
-
-**2. Configurar la URL de autenticación.** En [Authentication → URL Configuration](https://supabase.com/dashboard/project/bioaztyrkmingcziolot/auth/url-configuration), establece:
-- **Site URL:** `https://jarkkio.github.io/Ecos-de-papel/`
-- **Redirect URLs:** `https://jarkkio.github.io/Ecos-de-papel/**`
-
-**3. Registrar al administrador inicial.** Entra al sitio publicado, crea tu cuenta con correo y contraseña y confírmala a través del mensaje recibido. Si el correo no llega, revisa SMTP y los registros de Auth.
-
-**4. Otorgar el primer permiso administrativo.** En el [SQL Editor del proyecto Ecos de Papel](https://supabase.com/dashboard/project/bioaztyrkmingcziolot/sql/new), ejecuta sustituyendo el correo por el usado al registrarse:
-
+1. Abre la web y pulsa **Crear uno**, introduce el usuario elegido (por ejemplo, `admin`) y su contraseña.
+2. Después de completar el registro, se debe promover el usuario a administrador una sola vez desde el SQL Editor, ejecutando:
 ```sql
-update public.profiles
-set role = 'admin'
-where id = (
-  select id from auth.users
-  where lower(email) = lower('TU_CORREO@DOMINIO.COM')
-);
+update public.profiles set role='admin' where username='admin';
 ```
+3. Vuelve a iniciar sesión. El administrador ya puede asignar roles desde la sección **Miembros → Gestionar roles**.
+4. Cambia la contraseña provisional desde **Mi espacio → Cambiar contraseña**, especialmente si se compartió por chat.
 
-**5. Administrar roles desde la web.** Cierra sesión y vuelve a entrar. En la sección **Miembros → Gestionar roles**, el administrador podrá nombrar moderadores y otros administradores. Los cambios quedan auditados en `role_assignments`. Los miembros nuevos siempre comienzan como `member`.
+No publiques la contraseña del administrador en archivos de GitHub ni en configuraciones. Si olvidas la contraseña, la recuperación debe realizarla otro administrador o el propietario del proyecto; **no hay recuperación automática por correo**.
 
 ## Funciones
 
-- **Lectodinamicas**: retos independientes, tres imágenes de referencia, consigna y texto de arranque; participaciones, un voto por persona, prohibición del voto propio y resultados cuando se cierra el reto. Las actividades anteriores no se sobrescriben.
-- **Búhos de lectura**: orden de menor a mayor número de vistas, promociones literarias y marca personal de lectura. Las cifras de vistas las indica el autor, no se obtienen automáticamente de Wattpad.
-- **Miembros**: biografía y enlaces Wattpad/externos, permiso según rol.
-- **Mi espacio**: edición del perfil, obras y resumen de participaciones.
-- **Acceso**: registro, inicio y cierre de sesión, confirmación por correo y recuperación de contraseña (esta última también requiere SMTP).
+- **Lectodinamicas** independientes con tres imágenes, consigna, fragmentos, votación por otros participantes y resultados al cerrar. Se conserva el historial.
+- **Búhos de lectura:** catálogo de obras ordenadas de menos a más vistas, enlaces y lecturas marcadas por el usuario.
+- **Miembros:** perfiles con biografía y enlaces a Wattpad y otros sitios.
+- **Mi espacio:** nombre literario, publicaciones y cambio de contraseña.
+- **Administración:** gestión de roles. Las políticas de la base de datos impiden a los usuarios comunes asignarse privilegios.
 
-## Seguridad y mantenimiento
+## Archivos
 
-- Clave pública en `config.js`, nunca una secret key ni service_role.
-- Todas las tablas públicas tienen RLS; el análisis Security Advisor no reporta observaciones actualmente.
-- Los roles están protegidos de la edición directa desde el cliente. Los cambios administrativos usan una tabla de auditoría y un trigger privado. Moderadores no pueden concederse privilegios.
-- Un miembro no puede crear ni cerrar retos, no puede votar por sí mismo ni emitir más de un voto por reto.
-- Los votos y fragmentos se bloquean al finalizar el reto; el histórico permanece.
-- El frontend obtiene hasta 5 000 registros por tabla, por lo que se necesitará paginación si el club crece mucho.
-- Para implementar mejoras usa commits en `main`. El workflow [Publicar Ecos de Papel](.github/workflows/pages.yml) realiza el despliegue mediante GitHub Pages.
-
-## Archivos principales
-
-| Archivo | Propósito |
+| Archivo | Uso |
 | --- | --- |
-| `index.html` | Interfaz web responsive y operaciones |
-| `config.js` | Conexión pública a Supabase del club |
-| `live.js` | Cliente de Supabase: login, escritos, votos, imágenes, roles |
-| `supabase/schema.sql` | Esquema inicial; aplicado al proyecto real |
-| `supabase/02_roles_indexes_images.sql` | Migración posterior: gestión de roles, índices e imágenes obligatorias; ya aplicada |
-| `.github/workflows/pages.yml` | Publicación automática |
+| `index.html` | Web responsive y formularios de usuario/contraseña |
+| `live.js` | Conexión a Auth, Database, Storage y registro |
+| `config.js` | Configuración **pública** de Supabase |
+| `supabase/schema.sql` | Esquema inicial ya aplicado |
+| `supabase/02_roles_indexes_images.sql` | Actualización de roles e imágenes obligatorias ya aplicada |
+| `supabase/03_usuario_password.sql` | Migración de usuarios sin correo ya aplicada |
+| `supabase/functions/username-register/index.ts` | Código de la Edge Function desplegada |
+| `.github/workflows/pages.yml` | Despliegue automático mediante GitHub Pages |
 
-## Verificación completada
+## Comprobaciones
 
-Se ejecutaron pruebas transaccionales de inserción de perfiles mediante trigger, publicación de dinámicas, participaciones, votos y lecturas, rechazo de acciones no autorizadas y gestión de roles. Los datos de esas pruebas se revirtieron y no aparecen como participantes reales. El análisis del archivo JavaScript terminó sin errores de sintaxis. Falta validar el ciclo completo desde el navegador con cuentas verdaderas después de configurar SMTP.
+El proyecto utiliza tablas protegidas mediante Row Level Security, limitación de un voto por dinámica y prohibición de votar por el propio fragmento. Supabase Security Advisor no mostró avisos en la revisión anterior. Se probó en transacciones la protección de roles y votos, con reversión de los datos de prueba. La autenticación por usuario/contraseña requiere todavía una prueba completa real con un usuario registrado y acceso desde el navegador.
+
+**Observación:** los alias internos no son correos recuperables. El uso de contraseñas únicas y el cuidado de la cuenta administradora es especialmente importante.
