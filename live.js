@@ -30,7 +30,7 @@
         rows('profiles'), rows('lectodinamicas'), rows('lectodinamica_images'),
         rows('fragments'), rows('votes'), rows('works'), rows('readings')
       ]);
-      const members = people.map(p => ({
+      const members = people.filter(p => p.username !== 'admin' || p.id === userId).map(p => ({
         id: p.id, name: p.display_name, role: p.role, bio: p.bio || '',
         wattpad: p.wattpad_url || '', other: p.other_url || ''
       }));
