@@ -1,60 +1,71 @@
 # Ecos de Papel 🦉
+Aplicación web del club de escritura Ecos de Papel.
 
-Aplicación web del club de escritura **Ecos de Papel**.
+**Sitio web:** https://jarkkio.github.io/Ecos-de-papel/
 
-**Repositorio:** https://github.com/jarkkio/Ecos-de-papel
+**Backend:** Supabase `Ecos de Papel` (`bioaztyrkmingcziolot`). Es totalmente independiente de UMBRA Reader.
 
-**URL prevista cuando GitHub Pages esté activado:** https://jarkkio.github.io/Ecos-de-papel/
+## Estado actual (13 de octubre de 2026)
 
-## Qué incluye
+**El backend está creado y conectado a la web:** `config.js` contiene únicamente la URL y publishable key públicas de Supabase, con Row Level Security (RLS).
 
-- **Lectodinamicas:** actividades independientes en el tiempo, cada una con título, consigna, texto inicial, tres imágenes, participaciones, votos y resultado final. Se conserva el historial.
-- **Búhos de lectura:** promoción de escritos; orden de menor a mayor número de vistas (dato proporcionado por el autor) y marcador de lecturas.
-- **Miembros:** perfiles, biografías y enlaces a Wattpad u otras plataformas.
-- **Mi espacio:** identidad literaria y participaciones propias.
-- **Roles:** miembro, moderador y administrador, con permisos protegidos en la base de datos.
+Las tablas creadas son `profiles`, `lectodinamicas`, `lectodinamica_images`, `fragments`, `votes`, `works`, `readings` y `role_assignments`. El bucket Storage `lectodinamicas` permite administrar tres imágenes por reto.
 
-## Archivos
+Los formularios, las operaciones sobre lecturas, los fragmentos, la votación y la gestión de roles ya están conectados al backend. En esta instalación no se importaron usuarios ficticios: las tablas comienzan vacías.
+
+**Pendiente antes de admitir miembros reales:** configurar el correo SMTP del proyecto Supabase, crear/verificar la primera cuenta y otorgarle el rol de administrador. Hasta completar esto, no presentar el sistema como un servicio con registro público listo.
+
+## Habilitar registro real de los miembros
+
+**1. Configurar la entrega de correos.** En [Supabase Auth SMTP](https://supabase.com/dashboard/project/bioaztyrkmingcziolot/auth/smtp) agrega un proveedor SMTP autorizado (por ejemplo, Resend, Brevo, Amazon SES o el servicio que prefiera la administración). Sin SMTP propio, el servicio predeterminado de Supabase solo admite correos autorizados del equipo del proyecto. [Documentación oficial SMTP](https://supabase.com/docs/guides/auth/auth-smtp).
+
+**2. Configurar la URL de autenticación.** En [Authentication → URL Configuration](https://supabase.com/dashboard/project/bioaztyrkmingcziolot/auth/url-configuration), establece:
+- **Site URL:** `https://jarkkio.github.io/Ecos-de-papel/`
+- **Redirect URLs:** `https://jarkkio.github.io/Ecos-de-papel/**`
+
+**3. Registrar al administrador inicial.** Entra al sitio publicado, crea tu cuenta con correo y contraseña y confírmala a través del mensaje recibido. Si el correo no llega, revisa SMTP y los registros de Auth.
+
+**4. Otorgar el primer permiso administrativo.** En el [SQL Editor del proyecto Ecos de Papel](https://supabase.com/dashboard/project/bioaztyrkmingcziolot/sql/new), ejecuta sustituyendo el correo por el usado al registrarse:
+
+```sql
+update public.profiles
+set role = 'admin'
+where id = (
+  select id from auth.users
+  where lower(email) = lower('TU_CORREO@DOMINIO.COM')
+);
+```
+
+**5. Administrar roles desde la web.** Cierra sesión y vuelve a entrar. En la sección **Miembros → Gestionar roles**, el administrador podrá nombrar moderadores y otros administradores. Los cambios quedan auditados en `role_assignments`. Los miembros nuevos siempre comienzan como `member`.
+
+## Funciones
+
+- **Lectodinamicas**: retos independientes, tres imágenes de referencia, consigna y texto de arranque; participaciones, un voto por persona, prohibición del voto propio y resultados cuando se cierra el reto. Las actividades anteriores no se sobrescriben.
+- **Búhos de lectura**: orden de menor a mayor número de vistas, promociones literarias y marca personal de lectura. Las cifras de vistas las indica el autor, no se obtienen automáticamente de Wattpad.
+- **Miembros**: biografía y enlaces Wattpad/externos, permiso según rol.
+- **Mi espacio**: edición del perfil, obras y resumen de participaciones.
+- **Acceso**: registro, inicio y cierre de sesión, confirmación por correo y recuperación de contraseña (esta última también requiere SMTP).
+
+## Seguridad y mantenimiento
+
+- Clave pública en `config.js`, nunca una secret key ni service_role.
+- Todas las tablas públicas tienen RLS; el análisis Security Advisor no reporta observaciones actualmente.
+- Los roles están protegidos de la edición directa desde el cliente. Los cambios administrativos usan una tabla de auditoría y un trigger privado. Moderadores no pueden concederse privilegios.
+- Un miembro no puede crear ni cerrar retos, no puede votar por sí mismo ni emitir más de un voto por reto.
+- Los votos y fragmentos se bloquean al finalizar el reto; el histórico permanece.
+- El frontend obtiene hasta 5 000 registros por tabla, por lo que se necesitará paginación si el club crece mucho.
+- Para implementar mejoras usa commits en `main`. El workflow [Publicar Ecos de Papel](.github/workflows/pages.yml) realiza el despliegue mediante GitHub Pages.
+
+## Archivos principales
 
 | Archivo | Propósito |
 | --- | --- |
-| `index.html` | Interfaz navegable responsive |
-| `config.js` | Configuración pública del backend; inicia en blanco |
-| `live.js` | Integración Supabase Auth, Postgres y Storage |
-| `supabase/schema.sql` | Tablas, índices, perfiles automáticos y reglas RLS |
-| `.github/workflows/pages.yml` | Workflow para publicar el sitio |
+| `index.html` | Interfaz web responsive y operaciones |
+| `config.js` | Conexión pública a Supabase del club |
+| `live.js` | Cliente de Supabase: login, escritos, votos, imágenes, roles |
+| `supabase/schema.sql` | Referencia del esquema inicial; **ya aplicada**, no volver a ejecutarla |
+| `.github/workflows/pages.yml` | Publicación automática |
 
-## Modo demostración y modo conectado
+## Verificación completada
 
-El archivo `config.js` está vacío intencionalmente. Por lo tanto, **la web inicia en modo demo con datos ficticios y almacenamiento local**, sin usuarios reales ni sincronización. Puedes probar las tres secciones y el cambio de roles simulado.
-
-Para pasar a producción, configura un proyecto nuevo en Supabase. **Nunca ejecutes el SQL de Ecos de Papel en el proyecto UMBRA Reader.**
-
-1. Crea un proyecto Supabase independiente llamado **Ecos de Papel** en la organización y el plan que elijas.
-2. En su SQL Editor ejecuta `supabase/schema.sql`. El esquema habilita RLS, comprueba los roles e impide los votos a la propia participación o fuera del periodo abierto.
-3. Registra la URL del proyecto y la **publishable key** (`sb_publishable_...`) en `config.js`. Ninguna contraseña, secret key, service_role ni token privado debe subirse al repositorio.
-4. En Supabase Authentication, habilita Email/Password y configura **Site URL** y **Redirect URLs** para la web pública, por ejemplo `https://jarkkio.github.io/Ecos-de-papel/**`.
-5. Crea tu cuenta desde la web. Para otorgarte el primer rol de administración, desde SQL Editor de **Ecos de Papel** ejecuta con tu correo:
-   ```sql
-   update public.profiles set role = 'admin'
-   where id = (select id from auth.users where email = 'TU_CORREO@DOMINIO.COM');
-   ```
-6. Vuelve a iniciar sesión y comprueba que puedes crear y cerrar Lectodinamicas. Los miembros nuevos se crean con rol `member`.
-
-Los permisos de modificación de roles nunca se conceden al navegador. Los moderadores y administradores pueden abrir/cerrar dinámicas. Cada miembro puede editar sus propios fragmentos mientras estén abiertos, emitir un voto por dinámica que no sea para sí mismo y registrar obras/lecturas.
-
-## Publicar con GitHub Pages
-
-En GitHub ve a **Settings → Pages → Build and deployment → Source: GitHub Actions**. Después ejecuta **Actions → Publicar Ecos de Papel → Run workflow** si no se inició automáticamente. Los siguientes cambios a los archivos web se publicarán con este workflow.
-
-El workflow está preparado, **pero su existencia no garantiza que Pages ya esté habilitado ni que la web esté en línea**. Hay que revisar Actions para confirmar el despliegue.
-
-## Notas del MVP
-
-- Las fechas del reto se muestran, pero su apertura/cierre efectivos los controla el estado: `upcoming`, `open` o `closed`.
-- Los votos se contabilizan por dinámica; si existe un empate, se anuncia el empate.
-- El número de vistas de Wattpad y otras plataformas es **declarado por los miembros**, no consultado automáticamente.
-- Las imágenes se alojarán en Supabase Storage solo después de configurar la base real.
-- El adaptador trae hasta 5,000 filas por tabla. Se necesitará paginación en una versión de mayor escala.
-- No existe migración automática de datos ficticios a usuarios auténticos.
-- Antes de usar un concurso oficial se deben hacer pruebas con múltiples cuentas, roles, cierre y votaciones.
+Se ejecutaron pruebas transaccionales de inserción de perfiles mediante trigger, publicación de dinámicas, participaciones, votos y lecturas, rechazo de acciones no autorizadas y gestión de roles. Los datos de esas pruebas se revirtieron y no aparecen como participantes reales. El análisis del archivo JavaScript terminó sin errores de sintaxis. Falta validar el ciclo completo desde el navegador con cuentas verdaderas después de configurar SMTP.
