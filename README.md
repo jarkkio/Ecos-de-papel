@@ -63,7 +63,8 @@ where id = (
 | `index.html` | Interfaz web responsive y operaciones |
 | `config.js` | Conexión pública a Supabase del club |
 | `live.js` | Cliente de Supabase: login, escritos, votos, imágenes, roles |
-| `supabase/schema.sql` | Referencia del esquema inicial; **ya aplicada**, no volver a ejecutarla |
+| `supabase/schema.sql` | Esquema inicial; aplicado al proyecto real |
+| `supabase/02_roles_indexes_images.sql` | Migración posterior: gestión de roles, índices e imágenes obligatorias; ya aplicada |
 | `.github/workflows/pages.yml` | Publicación automática |
 
 ## Verificación completada
