@@ -133,22 +133,29 @@
     }
     return {
       load, createDynamic, saveFragment, saveWork, saveProfile, vote, setRead, setStage, setMemberRole,
-      async signUp(name,email,password) {
-        const {data,error} = await client.auth.signUp({email,password,options:{data:{name},emailRedirectTo:window.location.origin+window.location.pathname}});
-        return required(data,error);
-      },
-      async signIn(email,password) {
-        const {data,error} = await client.auth.signInWithPassword({email,password});
-        return required(data,error);
-      },
-      async resetPassword(email) {
-        const {error} = await client.auth.resetPasswordForEmail(email,{
-          redirectTo:window.location.origin+window.location.pathname
+      async signUp(username,password) {
+        username=String(username||'').trim().toLowerCase();
+        if(!/^[a-z0-9_]{3,24}$/.test(username)) throw Error('Nombre de usuario inválido: 3 a 24 letras, números o guiones bajos.');
+        if(typeof password !== 'string'||password.length<8||password.length>72) throw Error('Usa una contraseña de 8 a 72 caracteres.');
+        const response=await fetch(url+'/functions/v1/username-register',{
+          method:'POST',headers:{'Content-Type':'application/json','apikey':key},
+          body:JSON.stringify({username,password})
         });
-        if(error)throw error;
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok) throw Error(payload.error||'No se pudo registrar la cuenta.');
+        return await this.signIn(username,password);
+      },
+      async signIn(username,password) {
+        username=String(username||'').trim().toLowerCase();
+        if(!/^[a-z0-9_]{3,24}$/.test(username))throw Error('Introduce un nombre de usuario válido.');
+        const {data,error}=await client.auth.signInWithPassword({
+          email:username+'@login.ecos-de-papel.invalid',password
+        });
+        return required(data,error);
       },
       async updatePassword(password) {
-        const {error} = await client.auth.updateUser({password});
+        if(typeof password!=='string'||password.length<8||password.length>72)throw Error('Usa una contraseña de 8 a 72 caracteres.');
+        const {error}=await client.auth.updateUser({password});
         if(error)throw error;
       },
       async signOut() { const {error} = await client.auth.signOut(); if(error) throw error; },
