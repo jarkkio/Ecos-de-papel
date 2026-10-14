@@ -125,8 +125,13 @@
       const { error } = await from('lectodinamicas').update({ stage }).eq('id',dynId);
       if (error) throw error;
     }
+    async function setMemberRole(uid, memberId, role) {
+      if (!['member','moderator','admin'].includes(role) || uid === memberId) throw Error('Asignación de rol inválida.');
+      const { error } = await from('role_assignments').insert({ assigned_by:uid, target_id:memberId, new_role:role });
+      if (error) throw error;
+    }
     return {
-      load, createDynamic, saveFragment, saveWork, saveProfile, vote, setRead, setStage,
+      load, createDynamic, saveFragment, saveWork, saveProfile, vote, setRead, setStage, setMemberRole,
       async signUp(name,email,password) {
         const {data,error} = await client.auth.signUp({email,password,options:{data:{name}}});
         return required(data,error);
