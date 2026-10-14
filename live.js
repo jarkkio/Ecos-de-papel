@@ -133,12 +133,22 @@
     return {
       load, createDynamic, saveFragment, saveWork, saveProfile, vote, setRead, setStage, setMemberRole,
       async signUp(name,email,password) {
-        const {data,error} = await client.auth.signUp({email,password,options:{data:{name}}});
+        const {data,error} = await client.auth.signUp({email,password,options:{data:{name},emailRedirectTo:window.location.origin+window.location.pathname}});
         return required(data,error);
       },
       async signIn(email,password) {
         const {data,error} = await client.auth.signInWithPassword({email,password});
         return required(data,error);
+      },
+      async resetPassword(email) {
+        const {error} = await client.auth.resetPasswordForEmail(email,{
+          redirectTo:window.location.origin+window.location.pathname
+        });
+        if(error)throw error;
+      },
+      async updatePassword(password) {
+        const {error} = await client.auth.updateUser({password});
+        if(error)throw error;
       },
       async signOut() { const {error} = await client.auth.signOut(); if(error) throw error; },
       async getUser() {
