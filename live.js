@@ -55,6 +55,7 @@
     }
     async function createDynamic(d, uid) {
       if (!Array.isArray(d.images) || d.images.length !== 3) throw Error('Cada dinámica debe incluir tres referencias.');
+      if (!d.images.every(i => i.label?.trim() && (i.file || i.url?.trim()))) throw Error('Añade una imagen real para cada una de las tres referencias.');
       const dynId = crypto.randomUUID();
       const imageRows = [];
       for (let i = 0; i < 3; i++) {
