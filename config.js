@@ -1,6 +1,5 @@
-// Archivo público de configuración: NO añadas aquí contraseñas ni service_role keys.
-// Para activar el modo conectado, introduce la URL y publishable key de TU proyecto Ecos de Papel.
+// Ecos de Papel — Solo clave PUBLICABLE de Supabase (RLS activo). Nunca usar una secret/service_role.
 window.ECOS_SUPABASE_CONFIG = {
-  url: '',
-  publishableKey: ''
+  url: "https://bioaztyrkmingcziolot.supabase.co",
+  publishableKey: "sb_publishable_o_v9ORPU2W-oUGuDYZBsxA_ax4gxYsO"
 };
